@@ -9,7 +9,7 @@ class TestModel(TestCase):
         email = 'salman@gmail.com'
         password = 'something1234'
         user = get_user_model().objects.create_user(email=email,
-                                                    password=password)
+                                                    password=password,)
         self.assertEqual(email, user.email)
         self.assertTrue(user.check_password(password))
 
