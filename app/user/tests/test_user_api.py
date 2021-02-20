@@ -7,10 +7,11 @@ from rest_framework import status
 
 CREATE_USER_URL = reverse('user:create')
 TOKEN_URL = reverse('user:token')
+ME_URL = reverse('user:me')
 
 
 def create_user(**params):
-    get_user_model().objects.create_user(**params)
+    return get_user_model().objects.create_user(**params)
 
 
 class PublicUserAPITest(TestCase):
@@ -89,3 +90,45 @@ class PublicUserAPITest(TestCase):
         res = self.client.post(TOKEN_URL, wrong_payload)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertNotIn('token', res.data)
+
+    def test_retrieve_user_unauthorized(self):
+        """Test that authentication is required"""
+        res = self.client.get(ME_URL)
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PrivateUserAPITest(TestCase):
+    """Test API request for authenticated user"""
+
+    def setUp(self):
+        self.user = create_user(
+            email='Salman@gmail.com',
+            password='test1234',
+            name='Salman Barani'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_retrieve_profile_success(self):
+        """Test that logged in user gets profile"""
+        res = self.client.get(ME_URL)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {
+            "name": self.user.name,
+            "email": self.user.email
+        })
+
+    def test_post_me_not_allowed(self):
+        """Test that user can't make http post request on me url"""
+        res = self.client.post(ME_URL, {})
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_update_user_success(self):
+        """Test that updating user works correctly"""
+        payload = {'name': 'Something beautiful',
+                   'password': 'something1234'}
+        res = self.client.patch(ME_URL, payload)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.name, payload['name'])
+        self.assertTrue(self.user.check_password(payload['password']))
+        self.assertTrue(res.status_code, status.HTTP_200_OK)
