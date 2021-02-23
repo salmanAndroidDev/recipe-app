@@ -44,3 +44,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Retrieve limits to authenticated user"""
         return self.queryset.filter(user=self.request.user).order_by('-id')
+
+    def get_serializer_class(self):
+        """Return appropriate serializer class"""
+        if self.action == 'retrieve':  # means request is for fetching detail
+            return serializers.RecipeDetailSerializer
+        # Otherwise returns specified serializer
+        return self.serializer_class
